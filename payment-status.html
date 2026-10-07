@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Status Pembayaran · Mulyashop Digital</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<main class="wrap" id="app"></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/common.js"></script>
+
+<script>
+mount();
+
+(async () => {
+
+  const id = new URLSearchParams(location.search).get("order");
+  const s = await session();
+
+  if (!s || !id) {
+    location.replace("index.html");
+    return;
+  }
+
+  $('#app').innerHTML = `
+    <div class="box">
+      <h2>⏳ Pembayaran sedang diverifikasi</h2>
+
+      <p>
+        Terima kasih sudah melakukan pembayaran.
+        Admin akan mengecek pembayaran DANA kamu terlebih dahulu.
+      </p>
+
+      <p>
+        Setelah pembayaran dikonfirmasi, produk digital
+        bisa langsung kamu unduh melalui akun.
+      </p>
+
+      <p>
+        <b>Status:</b> Menunggu verifikasi admin
+      </p>
+
+      <p style="font-size:13px;opacity:.75">
+        Halaman ini akan diperbarui otomatis.
+      </p>
+
+      <a class="btn o" href="account.html">
+        Lihat Akun
+      </a>
+    </div>
+  `;
+
+  let n = 0;
+
+  const chk = async () => {
+
+    try {
+
+      const r = await fnCall(
+        "check-order-status?order=" +
+        encodeURIComponent(id),
+        null,
+        "GET"
+      );
+
+      if (["paid", "completed"].includes(r.status)) {
+
+        cart.clear();
+        localStorage.removeItem("ms_draft");
+
+        $('#app').innerHTML = `
+          <div class="box">
+            <h2>✅ Pembayaran berhasil</h2>
+
+            <p>
+              Pesanan <b>${esc(r.order_number)}</b>
+              sudah dikonfirmasi oleh admin.
+            </p>
+
+            <p>
+              Produk digital kamu sekarang sudah bisa
+              diunduh melalui akun.
+            </p>
+
+            <a class="btn" href="account.html">
+              Unduh Produk
+            </a>
+          </div>
+        `;
+
+        return;
+      }
+
+      if (["cancelled", "expired"].includes(r.status)) {
+
+        $('#app').innerHTML = `
+          <div class="box">
+            <h2>❌ Pesanan tidak dapat diproses</h2>
+
+            <p>
+              Status pesanan:
+              <b>${esc(r.status)}</b>
+            </p>
+
+            <a class="btn" href="checkout.html">
+              Kembali ke Checkout
+            </a>
+          </div>
+        `;
+
+        return;
+      }
+
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (++n < 120) {
+      setTimeout(chk, 5000);
+    }
+
+  };
+
+  chk();
+
+})();
+</script>
+
+</body>
+</html>

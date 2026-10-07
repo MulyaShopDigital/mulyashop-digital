@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Checkout · Mulyashop Digital</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+<main class="wrap" id="app"></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/common.js"></script>
+
+<script>
+mount();
+
+(async () => {
+  const ids = cart.get();
+
+  if (!ids.length) {
+    return location.replace("cart.html");
+  }
+
+  const { data: ps, error } = await sb
+    .from("products")
+    .select("id,name,price")
+    .in("id", ids)
+    .eq("is_active", true);
+
+  if (error || !ps || !ps.length) {
+    return location.replace("cart.html");
+  }
+
+  const total = ps.reduce(
+    (a, p) => a + Number(p.price),
+    0
+  );
+
+  const danaNumber = CFG.DANA?.number || "";
+  const danaName = CFG.DANA?.name || "";
+
+  $("#app").innerHTML = `
+    <h2>Checkout</h2>
+
+    <div class="box">
+      <h3>Data Pembeli</h3>
+
+      <label>
+        Nama lengkap
+        <input id="n" autocomplete="name">
+      </label>
+
+      <label>
+        Nomor WhatsApp
+        <input id="w" type="tel" autocomplete="tel">
+      </label>
+
+      <label>
+        Email
+        <input id="e" type="email" autocomplete="email">
+      </label>
+
+      <p>
+        <small>
+          Produk digital, jadi tidak perlu alamat pengiriman.
+        </small>
+      </p>
+    </div>
+
+    <div class="box">
+      <h3>Ringkasan Pesanan</h3>
+
+      ${ps.map(p => `
+        <div class="row">
+          <span>${esc(p.name)} ×1</span>
+          <span>${rp(p.price)}</span>
+        </div>
+      `).join("")}
+
+      <div class="row">
+        <b>Total</b>
+        <b>${rp(total)}</b>
+      </div>
+    </div>
+
+    <button class="btn" id="create" style="width:100%">
+      Buat Pesanan
+    </button>
+
+    <p id="er" style="color:#b00"></p>
+
+    <div id="payment" style="display:none"></div>
+  `;
+
+  const F = ["n", "w", "e"];
+
+  const d = JSON.parse(
+    localStorage.ms_draft || "{}"
+  );
+
+  const s0 = await session();
+
+  F.forEach(f => {
+    $("#" + f).value =
+      d[f] ||
+      (
+        f === "e"
+          ? s0?.user?.email
+          : f === "n"
+            ? s0?.user?.user_metadata?.full_name
+            : ""
+      ) ||
+      "";
+
+    $("#" + f).oninput = () => {
+      const o = {};
+
+      F.forEach(k => {
+        o[k] = $("#" + k).value;
+      });
+
+      localStorage.ms_draft =
+        JSON.stringify(o);
+    };
+  });
+
+  $("#create").onclick = async () => {
+    const er = $("#er");
+
+    er.textContent = "";
+
+    const v = k =>
+      $("#" + k).value.trim();
+
+    if (
+      v("n").length < 2 ||
+      v("w").replace(/\D/g, "").length < 9 ||
+      !/^\S+@\S+\.\S+$/.test(v("e"))
+    ) {
+      er.textContent =
+        "Lengkapi nama, WhatsApp, dan email dengan benar.";
+      return;
+    }
+
+    const s = await session();
+
+    if (!s) {
+      localStorage.ms_draft =
+        JSON.stringify({
+          n: v("n"),
+          w: v("w"),
+          e: v("e")
+        });
+
+      return location.href =
+        "login.html?redirect=checkout.html";
+    }
+
+    $("#create").disabled = true;
+    $("#create").textContent =
+      "Membuat pesanan...";
+
+    try {
+      const r = await fnCall(
+        "create-order",
+        {
+          ids,
+          name: v("n"),
+          whatsapp: v("w"),
+          email: v("e")
+        }
+      );
+
+      $("#create").style.display = "none";
+
+      $("#payment").innerHTML = `
+        <div class="box">
+          <h3>Pembayaran DANA</h3>
+
+          <p>
+            Pesanan berhasil dibuat.
+            Silakan lakukan transfer sesuai jumlah berikut.
+          </p>
+
+          <div class="box">
+            <p>
+              <b>Nomor DANA</b><br>
+              <span style="font-size:1.2rem">
+                ${esc(danaNumber)}
+              </span>
+            </p>
+
+            <p>
+              <b>Nama penerima</b><br>
+              ${esc(danaName)}
+            </p>
+
+            <p>
+              <b>Total pembayaran</b><br>
+              <span style="font-size:1.2rem">
+                ${rp(total)}
+              </span>
+            </p>
+
+            <p>
+              <b>Nomor pesanan</b><br>
+              ${esc(r.order_number)}
+            </p>
+          </div>
+
+          <p>
+            Setelah transfer, masukkan nomor referensi
+            atau keterangan transaksi DANA kamu.
+          </p>
+
+          <label>
+            Referensi pembayaran
+            <input
+              id="ref"
+              maxlength="100"
+              placeholder="Contoh: DANA-123456789"
+            >
+          </label>
+
+          <button
+            class="btn"
+            id="confirm"
+            style="width:100%"
+          >
+            Saya Sudah Bayar
+          </button>
+
+          <p id="perr" style="color:#b00"></p>
+        </div>
+      `;
+
+      $("#payment").style.display = "block";
+
+      $("#confirm").onclick = async () => {
+        const perr = $("#perr");
+        const reference =
+          $("#ref").value.trim();
+
+        perr.textContent = "";
+
+        if (reference.length < 3) {
+          perr.textContent =
+            "Masukkan referensi pembayaran terlebih dahulu.";
+          return;
+        }
+
+        $("#confirm").disabled = true;
+        $("#confirm").textContent =
+          "Mengirim...";
+
+        try {
+          const result = await fnCall(
+            "submit-payment-reference",
+            {
+              order_id: r.order_id,
+              payment_reference: reference
+            }
+          );
+
+          if (!result.success) {
+            throw new Error(
+              result.message ||
+              "Referensi pembayaran gagal dikirim."
+            );
+          }
+
+          localStorage.removeItem("ms_draft");
+
+          location.href =
+            "payment-status.html?order=" +
+            encodeURIComponent(r.order_id);
+
+        } catch (x) {
+          perr.textContent =
+            x.message ||
+            "Terjadi kesalahan. Coba lagi.";
+
+          $("#confirm").disabled = false;
+          $("#confirm").textContent =
+            "Saya Sudah Bayar";
+        }
+      };
+
+    } catch (x) {
+      er.textContent =
+        x.message ||
+        "Terjadi kesalahan. Coba lagi.";
+
+      $("#create").disabled = false;
+      $("#create").textContent =
+        "Buat Pesanan";
+    }
+  };
+})();
+</script>
+
+</body>
+</html>

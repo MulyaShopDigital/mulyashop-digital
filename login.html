@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Masuk · Mulyashop Digital</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="wrap" id="app"></main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    mount();
+
+    (async () => {
+      const q = new URLSearchParams(location.search);
+      const rd = /^(admin\/)?[a-z-]+\.html$/.test(q.get("redirect") || "")
+        ? q.get("redirect") : "account.html";
+      let reg = q.get("mode") === "register";
+
+      const draw = () => {
+        $("#app").innerHTML = `
+          <div class="box" style="max-width:420px;margin:20px auto">
+            <h2>${reg ? "Daftar" : "Masuk"}</h2>
+            ${reg ? '<input id="fn" placeholder="Nama lengkap">' : ""}
+            <input id="em" type="email" placeholder="Email">
+            <input id="pw" type="password" placeholder="Password (min. 6 karakter)">
+            <button class="btn" id="go" style="width:100%">
+              ${reg ? "Daftar" : "Masuk"}
+            </button>
+            <p id="er" style="color:#b00"></p>
+            <p><a href="#" id="sw">
+              ${reg ? "Sudah punya akun? Masuk" : "Belum punya akun? Daftar"}
+            </a></p>
+          </div>`;
+
+        $("#sw").onclick = e => {
+          e.preventDefault();
+          reg = !reg;
+          draw();
+        };
+
+        $("#go").onclick = async () => {
+          const email = $("#em").value.trim();
+          const password = $("#pw").value;
+
+          if (!email || !password)
+            return $("#er").textContent = "Email dan password wajib diisi.";
+
+          if (password.length < 6)
+            return $("#er").textContent = "Password minimal 6 karakter.";
+
+          if (reg) {
+            const fullName = $("#fn").value.trim();
+            if (!fullName)
+              return $("#er").textContent = "Nama lengkap wajib diisi.";
+
+            $("#go").disabled = true;
+            $("#go").textContent = "Mendaftarkan...";
+
+            const r = await sb.auth.signUp({
+              email,
+              password,
+              options: { data: { full_name: fullName } }
+            });
+
+            $("#go").disabled = false;
+            $("#go").textContent = "Daftar";
+
+            if (r.error) {
+              console.error("Supabase signup error:", r.error);
+              return $("#er").textContent =
+                r.error.message || "Pendaftaran gagal. Silakan coba lagi.";
+            }
+
+            if (!r.data.session) {
+              return $("#er").textContent =
+                "Pendaftaran berhasil! Silakan cek email untuk konfirmasi akun.";
+            }
+
+            location.href = rd;
+          } else {
+            $("#go").disabled = true;
+            $("#go").textContent = "Memproses...";
+
+            const r = await sb.auth.signInWithPassword({ email, password });
+
+            $("#go").disabled = false;
+            $("#go").textContent = "Masuk";
+
+            if (r.error) {
+              console.error("Supabase login error:", r.error);
+              return $("#er").textContent =
+                r.error.message || "Email atau password salah.";
+            }
+
+            location.href = rd;
+          }
+        };
+      };
+
+      draw();
+    })();
+  </script>
+</body>
+</html>

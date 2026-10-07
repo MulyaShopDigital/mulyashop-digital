@@ -1,0 +1,6 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Keranjang · Mulyashop Digital</title><link rel="stylesheet" href="css/style.css"></head><body><main class="wrap" id="app"></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/config.js"></script><script src="js/common.js"></script><script>mount();
+(async()=>{const ids=cart.get();let ps=[];
+if(ids.length){ps=(await sb.from('products').select('id,name,price').in('id',ids).eq('is_active',true)).data||[];const ok=ps.map(x=>x.id);if(ok.length!==ids.length)cart.set(ids.filter(i=>ok.includes(i)))}
+if(!ps.length){$('#app').innerHTML='<div class=empty><h3>Keranjang kosong</h3><a class=btn href=products.html>Lihat Produk</a></div>';return}
+const draw=()=>{$('#app').innerHTML='<h2>Keranjang</h2><div class=box>'+ps.map(p=>`<div class=row><span>${esc(p.name)}<br><b>${rp(p.price)}</b></span><button class='btn o' data-r='${p.id}'>Hapus</button></div>`).join('')+`<div class=row><b>Total</b><b>${rp(ps.reduce((a,p)=>a+p.price,0))}</b></div></div><a class=btn href=checkout.html>Checkout</a>`;
+document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{cart.remove(b.dataset.r);ps=ps.filter(x=>x.id!==b.dataset.r);ps.length?draw():location.reload()})};draw()})();</script></body></html>

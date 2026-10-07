@@ -1,0 +1,6 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Detail · Mulyashop Digital</title><link rel="stylesheet" href="css/style.css"></head><body><main class="wrap" id="app"></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/config.js"></script><script src="js/common.js"></script><script>mount();
+(async()=>{const{data:p}=await sb.from('products').select('*,categories(name)').eq('slug',new URLSearchParams(location.search).get('slug')||'').eq('is_active',true).maybeSingle();
+if(!p){$('#app').innerHTML='<div class=empty><h3>Produk tidak ditemukan</h3><a class=btn href=products.html>Lihat Produk</a></div>';return}
+document.title=p.name+' · Mulyashop Digital';
+$('#app').innerHTML=`<div class=box>${p.image_path?`<img src='${esc(imgUrl(p.image_path))}' alt='${esc(p.name)}' style='border-radius:14px'>`:''}<small>${esc(p.categories?.name||'')}</small><h1>${esc(p.name)}</h1><h2>${rp(p.price)}</h2><p style='white-space:pre-line'>${esc(p.description)}</p><p><b>Info produk digital:</b><br>${esc(p.digital_info)}</p><button class=btn id=a>Tambah ke Keranjang</button> <a class='btn o' href=cart.html>Buka Keranjang</a></div>`;
+$('#a').onclick=()=>cart.add(p.id)})();</script></body></html>

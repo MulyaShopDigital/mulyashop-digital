@@ -1,0 +1,8 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Status · Mulyashop Digital</title><link rel="stylesheet" href="css/style.css"></head><body><main class="wrap" id="app"></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/config.js"></script><script src="js/common.js"></script><script>mount();
+(async()=>{const id=new URLSearchParams(location.search).get('order');const s=await session();if(!s||!id)return location.replace('index.html');
+$('#app').innerHTML='<div class=box id=b>Memeriksa pembayaran…</div>';let n=0;
+const chk=async()=>{try{const r=await fnCall('check-order-status?order='+encodeURIComponent(id),null,'GET');
+ if(['paid','completed'].includes(r.status)){cart.clear();localStorage.removeItem('ms_draft');$('#b').innerHTML='<h2>✅ Pembayaran berhasil</h2><p>Pesanan '+esc(r.order_number)+' sudah lunas.</p><a class=btn href=account.html>Unduh Produk</a>';return}
+ if(['cancelled','expired'].includes(r.status)){$('#b').innerHTML='<h2>Pembayaran '+esc(r.status)+'</h2><a class=btn href=checkout.html>Coba lagi</a>';return}
+ $('#b').innerHTML='<h2>Menunggu pembayaran…</h2><p>Halaman ini memperbarui otomatis.</p>'}catch(e){$('#b').textContent=e.message}
+ if(++n<60)setTimeout(chk,5000)};chk()})();</script></body></html>

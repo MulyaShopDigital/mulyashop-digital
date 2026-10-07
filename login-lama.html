@@ -1,0 +1,8 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Masuk · Mulyashop Digital</title><link rel="stylesheet" href="css/style.css"></head><body><main class="wrap" id="app"></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/config.js"></script><script src="js/common.js"></script><script>mount();
+(async()=>{const q=new URLSearchParams(location.search),rd=/^(admin\/)?[a-z-]+\.html$/.test(q.get('redirect')||'')?q.get('redirect'):'account.html';let reg=q.get('mode')==='register';
+const draw=()=>{$('#app').innerHTML=`<div class=box style='max-width:420px;margin:20px auto'><h2>${reg?'Daftar':'Masuk'}</h2>${reg?'<input id=fn placeholder="Nama lengkap">':''}<input id=em type=email placeholder=Email><input id=pw type=password placeholder='Password (min. 6 karakter)'><button class=btn id=go style='width:100%'>${reg?'Daftar':'Masuk'}</button><p id=er style='color:#b00'></p><p><a href=# id=sw>${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</a></p></div>`;
+$('#sw').onclick=e=>{e.preventDefault();reg=!reg;draw()};
+$('#go').onclick=async()=>{const email=$('#em').value.trim(),password=$('#pw').value;
+ const r=reg?await sb.auth.signUp({email,password,options:{data:{full_name:$('#fn').value.trim()}}}):await sb.auth.signInWithPassword({email,password});
+ if(r.error||!r.data.session)return $('#er').textContent=r.error?'Email/password tidak valid atau sudah terdaftar.':'Silakan masuk.';
+ location.href=rd}};draw()})();</script></body></html>

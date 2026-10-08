@@ -17,8 +17,8 @@
 <body>
 <main class="wrap" id="app"></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/common.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
 <script>
 mount();
 (async()=>{
@@ -26,7 +26,7 @@ const[{data:c},{data:p}]=await Promise.all([
 sb.from('categories').select('*').eq('is_active',true).order('sort_order'),
 sb.from('products').select('*,categories(name)').eq('is_active',true).order('created_at',{ascending:false}).limit(8)
 ]);
-$('#app').innerHTML=`<div class="hero-banner"><img src="assets/images/hero-banner.png" alt="Mulyashop Digital - Small tools for your everyday life" loading="eager" decoding="async"></div>
+$('#app').innerHTML=`<div class="hero-banner"><img src="hero-banner.png" alt="Mulyashop Digital - Small tools for your everyday life" loading="eager" decoding="async"></div>
 <div class=hero><h1>Mulyashop Digital</h1><p><b>Digital Store for Students</b></p><p>Planner, template, wallpaper, dan produk digital manis untuk menunjang harimu sebagai mahasiswa & pelajar.</p><a class=btn href=products.html>Mulai Belanja</a></div>
 <section id=tentang><h2>Tentang Kami</h2><p>Mulyashop Digital adalah toko produk digital untuk mahasiswa dan pelajar. Produk dikirim instan lewat akun kamu setelah pembayaran berhasil.</p></section>
 <section id=kategori><h2>Kategori</h2><div class='grid'>${(c||[]).map(x=>`<a class=pill href='products.html?cat=${encodeURIComponent(x.slug)}'>${esc(x.name)}</a>`).join('')}</div></section>
